@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Jedničky a Pětky - Score Tracker</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+    html, body, #root { margin: 0; padding: 0; height: 100dvh; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const SCORING = [
+      { label: '1', points: 100, emoji: '⚀' },
+      { label: '5', points: 50, emoji: '⚄' },
+      { label: '3×1', points: 1000, emoji: '⚀⚀⚀' },
+      { label: '3×2', points: 200, emoji: '⚁⚁⚁' },
+      { label: '3×3', points: 300, emoji: '⚂⚂⚂' },
+      { label: '3×4', points: 400, emoji: '⚃⚃⚃' },
+      { label: '3×5', points: 500, emoji: '⚄⚄⚄' },
+      { label: '3×6', points: 600, emoji: '⚅⚅⚅' },
+      { label: '3 páry', points: 1000, emoji: '👥👥👥' },
+      { label: 'Postupka', points: 2000, emoji: '1-6' },
+      { label: '6×', points: 5000, emoji: '🎲×6' },
+    ];
+
+    const MIN_TO_BANK = 350;
+    const DEFAULT_TARGET = 10000;
+    const STORAGE_KEY = 'farkle_game_state';
+
+    function loadState() {
+      try {
+        const saved = sessionStorage.getItem(STORAGE_KEY);
+        return saved ? JSON.parse(saved) : null;
+      } catch { return null; }
+    }
+
+    function saveState(state) {
+      try {
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch {}
+    }
+
+    function FarkleTracker() {
+      const [screen, setScreen] = useState('setup');
+      const [players, setPlayers] = useState([]);
+      const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
+      const [turnScore, setTurnScore] = useState(0);
+      const [targetScore, setTargetScore] = useState(DEFAULT_TARGET);
+      const [winner, setWinner] = useState(null);
+      const [setupCount, setSetupCount] = useState(2);
+      const [setupNames, setSetupNames] = useState(['', '']);
+
+      useEffect(() => {
+        const saved = loadState();
+        if (saved && saved.players?.length > 0) {
+          setPlayers(saved.players);
+          setCurrentPlayerIndex(saved.currentPlayerIndex || 0);
+          setTargetScore(saved.targetScore || DEFAULT_TARGET);
+          setScreen('game');
+        }
+      }, []);
+
+      useEffect(() => {
+        if (screen === 'game' && players.length > 0) {
+          saveState({ players, currentPlayerIndex, targetScore });
+        }
+      }, [players, currentPlayerIndex, screen, targetScore]);
+
+      const handleSetupCountChange = (count) => {
+        setSetupCount(count);
+        setSetupNames(prev => {
+          const newNames = [...prev];
+          while (newNames.length < count) newNames.push('');
+          return newNames.slice(0, count);
+        });
+      };
+
+      const startGame = () => {
+        const newPlayers = Array.from({ length: setupCount }, (_, i) => ({
+          name: setupNames[i]?.trim() || `Hráč ${i + 1}`,
+          score: 0,
+        }));
+        setPlayers(newPlayers);
+        setCurrentPlayerIndex(0);
+        setTurnScore(0);
+        setWinner(null);
+        setScreen('game');
+      };
+
+      const addPoints = (points) => {
+        setTurnScore(prev => prev + points);
+      };
+
+      const bankPoints = () => {
+        if (turnScore < MIN_TO_BANK) return;
+        
+        const newPlayers = [...players];
+        newPlayers[currentPlayerIndex].score += turnScore;
+        
+        if (newPlayers[currentPlayerIndex].score >= targetScore) {
+          setWinner(newPlayers[currentPlayerIndex]);
+          setPlayers(newPlayers);
+          setScreen('winner');
+          return;
+        }
+        
+        setPlayers(newPlayers);
+        nextPlayer();
+      };
+
+      const bust = () => {
+        nextPlayer();
+      };
+
+      const nextPlayer = () => {
+        setTurnScore(0);
+        setCurrentPlayerIndex((currentPlayerIndex + 1) % players.length);
+      };
+
+      const resetTurn = () => {
+        setTurnScore(0);
+      };
+
+      const newGame = (preserveNames = false) => {
+        sessionStorage.removeItem(STORAGE_KEY);
+        if (preserveNames && players.length > 0) {
+          const names = players.map(p => p.name);
+          setSetupCount(names.length);
+          setSetupNames(names);
+        } else {
+          setSetupCount(2);
+          setSetupNames(['', '']);
+        }
+        setPlayers([]);
+        setCurrentPlayerIndex(0);
+        setTurnScore(0);
+        setWinner(null);
+        setScreen('setup');
+      };
+
+      const confirmNewGame = () => {
+        if (window.confirm('Opravdu začít novou hru? Aktuální hra bude ztracena.')) {
+          newGame();
+        }
+      };
+
+      const currentPlayer = players[currentPlayerIndex];
+      const canBank = turnScore >= MIN_TO_BANK;
+
+      if (screen === 'setup') {
+        return (
+          <div className="h-full bg-gradient-to-b from-emerald-900 to-emerald-950 text-white p-3 flex flex-col">
+            <h1 className="text-xl font-bold text-center">🎲 Jedničky a Pětky</h1>
+            <p className="text-emerald-300 text-center text-xs mb-3">Hra na {targetScore.toLocaleString()} bodů</p>
+            
+            <div className="flex-1 flex flex-col gap-3 max-w-md mx-auto w-full overflow-hidden">
+              <div>
+                <label className="block text-xs text-emerald-300 mb-1">Cílové skóre</label>
+                <div className="flex gap-2">
+                  {[5000, 10000, 15000].map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setTargetScore(t)}
+                      className={`flex-1 py-2 rounded-lg font-medium text-sm transition-all ${
+                        targetScore === t 
+                          ? 'bg-emerald-500 text-white' 
+                          : 'bg-emerald-800/50 text-emerald-300'
+                      }`}
+                    >
+                      {t.toLocaleString()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs text-emerald-300 mb-1">Počet hráčů</label>
+                <div className="flex gap-2">
+                  {[2, 3, 4, 5, 6].map(n => (
+                    <button
+                      key={n}
+                      onClick={() => handleSetupCountChange(n)}
+                      className={`flex-1 py-2 rounded-lg font-bold transition-all ${
+                        setupCount === n 
+                          ? 'bg-emerald-500 text-white scale-105' 
+                          : 'bg-emerald-800/50 text-emerald-300'
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto min-h-0">
+                <label className="block text-xs text-emerald-300 mb-1">Jména (volitelné)</label>
+                <div className="flex flex-col gap-1">
+                  {setupNames.map((name, i) => (
+                    <input
+                      key={i}
+                      type="text"
+                      placeholder={`Hráč ${i + 1}`}
+                      value={name}
+                      onChange={(e) => {
+                        const newNames = [...setupNames];
+                        newNames[i] = e.target.value;
+                        setSetupNames(newNames);
+                      }}
+                      className="w-full px-3 py-2 rounded-lg bg-emerald-800/50 border border-emerald-700 text-white placeholder-emerald-500 focus:outline-none focus:border-emerald-400 text-sm"
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={startGame}
+                className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-emerald-950 font-bold text-lg rounded-xl transition-all active:scale-95 flex-shrink-0"
+              >
+                Začít hru 🎲
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      if (screen === 'winner') {
+        return (
+          <div className="h-full bg-gradient-to-b from-amber-600 to-amber-800 text-white p-4 flex flex-col items-center justify-center">
+            <div className="text-5xl mb-2">🏆</div>
+            <h1 className="text-2xl font-bold mb-1">Vítěz!</h1>
+            <p className="text-3xl font-bold text-amber-200 mb-1">{winner?.name}</p>
+            <p className="text-xl mb-4">{winner?.score.toLocaleString()} bodů</p>
+            
+            <div className="w-full max-w-md space-y-1 mb-4">
+              {players
+                .sort((a, b) => b.score - a.score)
+                .map((p, i) => (
+                  <div key={i} className={`flex justify-between px-3 py-1 rounded-lg text-sm ${
+                    p.name === winner?.name ? 'bg-amber-500/50' : 'bg-amber-900/30'
+                  }`}>
+                    <span>{i + 1}. {p.name}</span>
+                    <span className="font-mono">{p.score.toLocaleString()}</span>
+                  </div>
+                ))}
+            </div>
+            
+            <button
+              onClick={() => newGame(true)}
+              className="w-full max-w-md py-3 bg-white text-amber-800 font-bold text-lg rounded-xl active:scale-95"
+            >
+              Nová hra
+            </button>
+          </div>
+        );
+      }
+
+      return (
+        <div className="h-full bg-gradient-to-b from-emerald-900 to-emerald-950 text-white flex flex-col overflow-hidden">
+          {/* Scoreboard - compact */}
+          <div className="flex-shrink-0 bg-emerald-950/80 px-1 py-1 flex gap-1 overflow-x-auto">
+            {players.map((p, i) => (
+              <div
+                key={i}
+                className={`flex-shrink-0 px-2 py-1 rounded text-center transition-all ${
+                  i === currentPlayerIndex
+                    ? 'bg-amber-500 text-emerald-950'
+                    : 'bg-emerald-800/50'
+                }`}
+              >
+                <div className="text-xs truncate max-w-14">{p.name}</div>
+                <div className="font-bold font-mono text-xs">{p.score.toLocaleString()}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Current player + score combined */}
+          <div className="flex-shrink-0 text-center py-2 px-2 flex items-center justify-center gap-4">
+            <div>
+              <p className="text-emerald-400 text-[10px]">Na tahu</p>
+              <h2 className="text-lg font-bold leading-tight">{currentPlayer?.name}</h2>
+              <p className="text-emerald-400 text-[10px]">
+                {currentPlayer?.score.toLocaleString()} / {targetScore.toLocaleString()}
+              </p>
+            </div>
+            <div className="border-l border-emerald-700 pl-4">
+              <p className="text-emerald-400 text-[10px]">Kolo</p>
+              <p className={`text-3xl font-bold font-mono leading-tight ${
+                turnScore >= MIN_TO_BANK ? 'text-amber-400' : 'text-white'
+              }`}>
+                +{turnScore.toLocaleString()}
+              </p>
+              {turnScore > 0 && turnScore < MIN_TO_BANK && (
+                <p className="text-red-400 text-[10px]">Min. {MIN_TO_BANK}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Scoring buttons - 4 columns */}
+          <div className="flex-1 px-1 py-1 min-h-0 overflow-hidden">
+            <div className="grid grid-cols-4 gap-1 h-full auto-rows-fr">
+              {SCORING.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => addPoints(s.points)}
+                  className="bg-emerald-800/70 active:bg-emerald-600 active:scale-95 rounded-lg flex flex-col items-center justify-center transition-all border border-emerald-700/50"
+                >
+                  <span className="text-sm leading-none">{s.emoji}</span>
+                  <span className="font-bold text-amber-400 text-sm leading-tight">+{s.points}</span>
+                  <span className="text-[9px] text-emerald-400 leading-none">{s.label}</span>
+                </button>
+              ))}
+              {/* Reset button in grid */}
+              <button
+                onClick={resetTurn}
+                disabled={turnScore === 0}
+                className="bg-emerald-700/50 active:scale-95 rounded-lg flex flex-col items-center justify-center transition-all disabled:opacity-30"
+              >
+                <span className="text-lg">↺</span>
+                <span className="text-[9px] text-emerald-400">Reset</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex-shrink-0 p-2 bg-emerald-950/90 border-t border-emerald-800">
+            <div className="flex gap-2">
+              <button
+                onClick={bust}
+                className="flex-1 py-3 bg-red-600 active:bg-red-400 active:scale-95 font-bold text-base rounded-xl transition-all"
+              >
+                💀 Shořel
+              </button>
+              <button
+                onClick={bankPoints}
+                disabled={!canBank}
+                className={`flex-1 py-3 font-bold text-base rounded-xl transition-all active:scale-95 ${
+                  canBank
+                    ? 'bg-amber-500 text-emerald-950'
+                    : 'bg-emerald-800 text-emerald-600'
+                }`}
+              >
+                ✓ Zapsat
+              </button>
+            </div>
+            <button
+              onClick={confirmNewGame}
+              className="w-full py-1 text-emerald-600 text-xs mt-1"
+            >
+              Nová hra
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<FarkleTracker />);
+  </script>
+</body>
+</html>
