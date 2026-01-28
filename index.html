@@ -8,7 +8,7 @@
     content="Počítadlo skóre pro oblíbenou kostkovou hru Jedničky a Pětky (Farkle). Jednoduché, rychlé, pro 2-6 hráčů.">
 
   <!-- Open Graph -->
-  <meta property="og:title" content="🎲 Jedničky a Pětky - Počítadlo skóre">
+  <meta property="og:title" content="🎲 Jedničky a Pětky - počítadlo skóre">
   <meta property="og:description"
     content="Počítadlo skóre pro oblíbenou kostkovou hru Jedničky a Pětky (Farkle). Jednoduché, rychlé, pro 2-6 hráčů.">
   <meta property="og:type" content="website">
@@ -21,10 +21,10 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="https://kostky.kopernici.cz/og-image.png">
-  <meta name="twitter:title" content="🎲 Jedničky a Pětky - Počítadlo skóre">
+  <meta name="twitter:title" content="🎲 Jedničky a Pětky - počítadlo skóre">
   <meta name="twitter:description" content="Počítadlo skóre pro oblíbenou kostkovou hru. Pro 2-6 hráčů.">
 
-  <title>Jedničky a Pětky - Počítadlo skóre</title>
+  <title>Jedničky a Pětky - počítadlo skóre</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -204,8 +204,8 @@
                       key={t}
                       onClick={() => setTargetScore(t)}
                       className={`flex-1 py-2 rounded-lg font-medium text-sm transition-all ${targetScore === t
-                          ? 'bg-emerald-500 text-white'
-                          : 'bg-emerald-800/50 text-emerald-300'
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-emerald-800/50 text-emerald-300'
                         }`}
                     >
                       {t.toLocaleString()}
@@ -222,8 +222,8 @@
                       key={n}
                       onClick={() => handleSetupCountChange(n)}
                       className={`flex-1 py-2 rounded-lg font-bold transition-all ${setupCount === n
-                          ? 'bg-emerald-500 text-white scale-105'
-                          : 'bg-emerald-800/50 text-emerald-300'
+                        ? 'bg-emerald-500 text-white scale-105'
+                        : 'bg-emerald-800/50 text-emerald-300'
                         }`}
                     >
                       {n}
@@ -302,8 +302,8 @@
                 <div
                   key={i}
                   className={`flex-shrink-0 px-2 py-1 rounded text-center transition-all ${i === currentPlayerIndex
-                      ? 'bg-amber-500 text-emerald-950'
-                      : 'bg-emerald-800/50'
+                    ? 'bg-amber-500 text-emerald-950'
+                    : 'bg-emerald-800/50'
                     }`}
                 >
                   <div className="text-xs truncate max-w-14">{p.name}</div>
@@ -380,8 +380,8 @@
                 onClick={bankPoints}
                 disabled={!canBank}
                 className={`flex-1 py-3 font-bold text-base rounded-xl transition-all active:scale-95 ${canBank
-                    ? 'bg-amber-500 text-emerald-950'
-                    : 'bg-emerald-800 text-emerald-600'
+                  ? 'bg-amber-500 text-emerald-950'
+                  : 'bg-emerald-800 text-emerald-600'
                   }`}
               >
                 ✓ Zapsat
